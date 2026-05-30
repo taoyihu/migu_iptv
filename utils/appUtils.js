@@ -47,9 +47,16 @@ function interfaceStr(url, headers, urlUserId, urlToken) {
     try {
       const config = readConfig()
       
-      // 只有配置存在时才应用（避免首次访问解析失败）
-      if (config && (config.channelGroupMap || config.hiddenChannels?.length > 0 || 
-          config.deletedGroups?.length > 0 || config.groupOrder?.length > 0)) {
+      // 只有存在任意自定义配置时才应用（避免首次访问解析失败）
+      // 注意：旧写法 `config.channelGroupMap` 恒真（{} 也为真），会导致始终套用配置；
+      // 这里改为按内容判断，并补上 groupRenameMap / customGroups
+      if (config && (
+        Object.keys(config.channelGroupMap || {}).length > 0 ||
+        Object.keys(config.groupRenameMap || {}).length > 0 ||
+        config.hiddenChannels?.length > 0 ||
+        config.deletedGroups?.length > 0 ||
+        config.customGroups?.length > 0 ||
+        config.groupOrder?.length > 0)) {
         printGrey("应用播放列表自定义配置")
         const groups = parseInterfaceTxt()
         const configuredGroups = applyConfig(groups, config)

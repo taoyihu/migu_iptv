@@ -4307,6 +4307,27 @@ if(success){
                     </div>
             `;
 
+            // 单频道归类：移动到其它分组（隐藏/已删除视图下不提供）
+            if (!isDeleted) {
+                const moveKey = `${groupName}::${channelId}`;
+                const renamedOriginal = (myPlaylistConfig.groupRenameMap && myPlaylistConfig.groupRenameMap[groupName]) || groupName;
+                const currentTarget = (myPlaylistConfig.channelGroupMap && myPlaylistConfig.channelGroupMap[moveKey]) || renamedOriginal;
+                const moveNames = myPlaylistData.map(g => g.name);
+                if (!moveNames.includes(currentTarget)) moveNames.unshift(currentTarget);
+                const moveOpts = moveNames.map(n => {
+                    const v = String(n).replace(/"/g, '&quot;');
+                    return `<option value="${v}"${n === currentTarget ? ' selected' : ''}>${n}</option>`;
+                }).join('');
+                detailHTML += `
+                    <div style="margin-bottom: 15px;">
+                        <strong style="color: #667eea;">移动到分组：</strong>
+                        <select id="channelMoveSelect" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #ddd; max-width: 200px;">${moveOpts}</select>
+                        <button class="btn btn-sm btn-primary" style="margin-left: 8px;" onclick="moveCurrentChannel()">移动</button>
+                        <div style="margin-top: 6px; color: #999; font-size: 12px;">将此频道单独归入所选分组（选回原分组即取消归类）</div>
+                    </div>
+                `;
+            }
+
             // 显示URL
             if (channel.url) {
                 // 获取当前页面的base URL（去掉/admin后的部分）
@@ -4411,6 +4432,44 @@ if(success){
         function closeChannelDetail() {
             document.getElementById('channelDetailModal').style.display = 'none';
             currentChannelDetail = null;
+        }
+
+        // 将当前详情中的频道移动到所选分组（单频道归类）
+        async function moveCurrentChannel() {
+            if (!currentChannelDetail) return;
+            const sel = document.getElementById('channelMoveSelect');
+            if (!sel) return;
+            const target = sel.value;
+            const groupName = currentChannelDetail.groupName; // 频道原始分组
+            const id = currentChannelDetail.id;
+            const moveKey = `${groupName}::${id}`;
+            const renamedOriginal = (myPlaylistConfig.groupRenameMap && myPlaylistConfig.groupRenameMap[groupName]) || groupName;
+
+            if (!myPlaylistConfig.channelGroupMap) myPlaylistConfig.channelGroupMap = {};
+            if (target === renamedOriginal || target === groupName) {
+                // 选回原分组 = 取消归类
+                delete myPlaylistConfig.channelGroupMap[moveKey];
+            } else {
+                myPlaylistConfig.channelGroupMap[moveKey] = target;
+            }
+
+            try {
+                const response = await fetch(API_PREFIX + '/api/my-playlist-config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(myPlaylistConfig)
+                });
+                const result = await response.json();
+                if (result.success) {
+                    closeChannelDetail();
+                    await loadMyPlaylist(false);
+                    showStatus(`已移动到「${target}」`, 'success');
+                } else {
+                    showStatus('移动失败: ' + (result.message || ''), 'error');
+                }
+            } catch (error) {
+                showStatus('移动失败: ' + error.message, 'error');
+            }
         }
 
         function previewPlay(actualUrl, playerUrl, channelName, sourceType) {

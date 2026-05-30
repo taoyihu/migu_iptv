@@ -248,29 +248,41 @@ export function applyConfig(groups, config) {
     
     // 2. 应用配置
     const resultGroups = {}
-    
+    const channelGroupMap = config.channelGroupMap || {}
+
     // 遍历所有频道
     channelMap.forEach((channel, key) => {
-      // 跳过隐藏的频道（使用 分组名::频道ID 进行匹配，支持按分组独立隐藏）
-      if (config.hiddenChannels?.includes(`${channel.originalGroup}::${channel.id}`)) {
+      // 频道标识：原始分组名::频道ID（与 hiddenChannels / channelGroupMap 同源，避免重命名/同名错乱）
+      const channelKey = `${channel.originalGroup}::${channel.id}`
+
+      // 跳过隐藏的频道（按分组独立隐藏）
+      if (config.hiddenChannels?.includes(channelKey)) {
         return
       }
-      
-      // 跳过已删除分组的频道（支持通配符前缀匹配）
-      if (isGroupDeleted(channel.originalGroup, config.deletedGroups)) {
+
+      // 单频道归类：被移动到其它分组的频道，目标分组优先级最高
+      const movedTo = channelGroupMap[channelKey]
+
+      // 跳过已删除分组的频道（支持通配符前缀匹配）；已被移动到别处的频道予以保留
+      if (!movedTo && isGroupDeleted(channel.originalGroup, config.deletedGroups)) {
         return
       }
-      
-      // 使用频道的原始分组（应用重命名映射）
-      let targetGroup = channel.originalGroup
-      if (targetGroup !== '未分组' && config.groupRenameMap && config.groupRenameMap[targetGroup]) {
-        targetGroup = config.groupRenameMap[targetGroup]
+
+      // 目标分组优先级：单频道移动 > 分组重命名 > 原始分组
+      let targetGroup
+      if (movedTo) {
+        targetGroup = movedTo
+      } else {
+        targetGroup = channel.originalGroup
+        if (targetGroup !== '未分组' && config.groupRenameMap && config.groupRenameMap[targetGroup]) {
+          targetGroup = config.groupRenameMap[targetGroup]
+        }
       }
-      
+
       if (!resultGroups[targetGroup]) {
         resultGroups[targetGroup] = []
       }
-      
+
       resultGroups[targetGroup].push(channel)
     })
     
