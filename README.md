@@ -749,8 +749,12 @@ node bump-version.js 2.2.1          # 直接指定版本号
 git add -A && git commit -m "release: vX.Y.Z"
 git tag vX.Y.Z
 
-# 4. 推送代码与 tag —— Actions 依赖 tag 触发构建并推送 Docker 镜像
+# 4. 推送代码与 tag（tag 仅作发布标记，本仓库不靠它触发构建）
 git push && git push --tags
+
+# 5. 到 GitHub Actions 手动运行 push_docker 工作流（workflow_dispatch）：
+#    默认从 main 构建并推送多架构镜像；镜像标签（:latest / :X.Y.Z / :X.Y / :X）
+#    写死在 push_docker.yaml 内，已随 bump-version.js 更新
 ```
 
 **注意事项**
@@ -759,7 +763,7 @@ git push && git push --tags
 - **更新日志面向用户写**：写「改了什么、对用户有什么影响」，而非内部实现；沿用现有 emoji 前缀（🆕 新功能 / 🛠️ 改进 / 🐛 修复 / 🔧 配置 / 🔒 安全 / ⚡ 性能 / 🗑️ 移除），标题加粗。
 - **核对日期**：脚本用运行时系统日期生成 `### vX.Y.Z (YYYY-MM-DD)` 标题，跨天发布或时区异常时手动改正。
 - **Docker 三个标签**：每版镜像会打 `:X.Y.Z`（精确）、`:X.Y`（次版本滚动）、`:X`（主版本滚动）。主版本标签曾长期漏更新、错打成 `:1`，已在 v2.2.0 修复——升 major 后务必确认 `:X` 已正确更新。
-- **tag 不能漏**：镜像构建依赖 tag，记得 `git tag` 且 `git push --tags`；只推代码、忘推 tag 不会触发构建。
+- **镜像构建是手动的**：`push_docker` 工作流为 `workflow_dispatch`，推代码 / tag 都**不会**自动触发；需到 GitHub Actions 页面手动 Run workflow（默认从 `main` 构建，镜像标签写死在 yaml 里、已随 `bump-version.js` 更新）。`git tag` 仅作发布标记。
 - **重启生效项**：监听端口、节目单更新间隔等改动需用户重启容器后才生效；本次若涉及，请在更新日志里提醒用户。
 -->
 
