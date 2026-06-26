@@ -1628,6 +1628,46 @@
             background: #f5f5f5;
         }
 
+        /* 频道台标缩略图 + 节目单配对徽章（issue #38：每频道直观看到配对状态） */
+        .ch-logo-wrap { flex: 0 0 auto; margin-right: 8px; display: inline-flex; }
+        .ch-logo {
+            width: 24px; height: 24px; object-fit: contain;
+            border: 1px solid #eee; border-radius: 4px; background: #fff;
+        }
+        .ch-logo-ph {
+            width: 24px; height: 24px; border: 1px dashed #d9d9d9; border-radius: 4px;
+            background: #fafafa; display: inline-flex; align-items: center; justify-content: center;
+        }
+        .ch-logo-ph::after { content: ''; width: 11px; height: 1px; background: #ccc; transform: rotate(-45deg); }
+        .ch-epg {
+            flex: 0 0 auto; margin-left: 6px; font-size: 11px; line-height: 1;
+            padding: 3px 5px; border-radius: 4px; border: 1px solid transparent; cursor: default;
+        }
+        .ch-epg.on  { background: #f6ffed; border-color: #d6f0bd; }
+        .ch-epg.off { background: #fafafa; border-color: #eee; filter: grayscale(1); opacity: .5; }
+
+        /* 顶部内联订阅地址栏（issue #38：免点编辑即可复制） */
+        .subscribe-bar {
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            background: #f0f7ff; border: 1px solid #d6e8ff; border-radius: 6px;
+            padding: 8px 12px; margin: 10px 0 0;
+        }
+        .subscribe-bar .sb-label { font-size: 12px; color: #1890ff; font-weight: 500; white-space: nowrap; }
+        .subscribe-bar code {
+            flex: 1; min-width: 160px; font-size: 12px; background: #fff;
+            border: 1px solid #e6e6e6; border-radius: 4px; padding: 4px 8px; color: #444;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .subscribe-bar .sb-sep { font-size: 12px; color: #999; white-space: nowrap; border-left: 1px solid #d6e8ff; padding-left: 10px; }
+        .subscribe-bar code.sb-epg { flex: 0 1 auto; min-width: 0; color: #666; }
+        .sb-copy {
+            border: 1px solid #1890ff; background: #fff; color: #1890ff;
+            padding: 4px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; white-space: nowrap;
+        }
+        .sb-copy:hover { background: #e6f2ff; }
+        .sb-copy.sb-copy-muted { border-color: #bbb; color: #666; }
+        .sb-copy.sb-copy-muted:hover { background: #f5f5f5; }
+
     </style>
 </head>
 <body>
@@ -1816,6 +1856,7 @@
                         <button class="btn btn-primary" onclick="openProfileModal()" title="管理多套配置档：切换 / 新建 / 改名 / 删除 / 重置">✏️ 编辑</button>
                     </div>
                 </div>
+                <div class="subscribe-bar" id="subscribeBar"></div>
                 <div class="my-playlist-container">
                     <div class="my-playlist-left">
                         <div class="my-playlist-section">
@@ -3915,6 +3956,7 @@ if(success){
         function renderProfileUI() {
             const label = document.getElementById('currentProfileLabel');
             if (label) label.textContent = currentProfileName();
+            renderSubscribeBar();   // 当前档变化时同步刷新订阅地址栏（issue #38）
             const modal = document.getElementById('profileModal');
             if (modal && modal.style.display === 'block') renderProfileList();
         }
@@ -4109,7 +4151,46 @@ if(success){
             }
         }
 
+        // 顶部内联订阅地址栏（issue #38）：当前档的 m3u 与 EPG 地址，一键复制，免点「编辑」。
+        function renderSubscribeBar() {
+            const bar = document.getElementById('subscribeBar');
+            if (!bar) return;
+            const base = window.location.origin + API_PREFIX;
+            const q = (activeProfile && activeProfile !== 'default') ? ('?profile=' + encodeURIComponent(activeProfile)) : '';
+            const m3u = base + '/interface.m3u' + q;
+            const epg = base + '/playback.xml';
+            bar.innerHTML =
+                `<span class="sb-label">📡 订阅地址</span>`
+                + `<code title="${escapeHtml(m3u)}">${escapeHtml(m3u)}</code>`
+                + `<button class="sb-copy" onclick="copyToClipboard('${m3u.replace(/'/g, "\\'")}', '订阅地址')">📋 复制</button>`
+                + `<span class="sb-sep">节目单 EPG</span>`
+                + `<code class="sb-epg" title="${escapeHtml(epg)}">${escapeHtml(epg)}</code>`
+                + `<button class="sb-copy sb-copy-muted" onclick="copyToClipboard('${epg.replace(/'/g, "\\'")}', 'EPG 地址')">📋 复制</button>`;
+        }
+
+        // 频道台标缩略图（issue #38）：显示当前台标，加载失败→虚线占位（无台标）。仅展示，点击仍走频道名。
+        function channelLogoThumb(channel) {
+            const base = window.location.origin + API_PREFIX;
+            const src = channel.logo ? String(channel.logo).replace(/\$\{replace\}/g, base) : '';
+            const tip = { local: '台标：本地上传', source: '台标：源自带', auto: '台标：公共库匹配' }[channel.logoStatus] || '台标';
+            if (!src) return `<span class="ch-logo-wrap" aria-hidden="true"><span class="ch-logo-ph" title="无台标"></span></span>`;
+            return `<span class="ch-logo-wrap" aria-hidden="true">`
+                + `<img class="ch-logo" src="${escapeHtml(src)}" loading="lazy" alt="" title="${escapeHtml(tip)}" `
+                + `onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex'">`
+                + `<span class="ch-logo-ph" style="display:none" title="无台标（图片加载失败）"></span></span>`;
+        }
+
+        // 节目单配对徽章（issue #38）：绿=已匹配（标题含归一后的规范名），灰=未匹配。
+        function channelEpgBadge(channel) {
+            if (channel.epgMatched) {
+                const t = channel.epgName ? ('已匹配节目单：' + channel.epgName) : '已匹配节目单';
+                return `<span class="ch-epg on" title="${escapeHtml(t)}">📅</span>`;
+            }
+            return `<span class="ch-epg off" title="未匹配节目单">📅</span>`;
+        }
+
         function renderMyPlaylist() {
+            renderSubscribeBar();   // 默认档用户不触发 renderProfileUI，这里兜底渲染订阅地址栏（issue #38）
             renderGroupLists();
             renderGroupDetail();
             updateMyChannelTotal();
@@ -4319,9 +4400,11 @@ if(success){
                                            onchange="toggleChannelSelection('${channel.id}')"
                                            ${selectedChannels.has(channel.id) ? 'checked' : ''}>
                                 ` : ''}
+                                ${channelLogoThumb(channel)}
                                 <div class="my-playlist-channel-name" title="点击查看详情：${channel.name}" onclick="showChannelDetail('${channel.id}', true)" style="cursor: pointer;">
                                     <span class="channel-detail-hint" aria-hidden="true">ⓘ</span>${channel.name}
                                 </div>
+                                ${channelEpgBadge(channel)}
                                 ${group.isPartialDelete && !isBatchMode ? `
                                     <div class="my-playlist-channel-actions" style="opacity: 1 !important;">
                                         <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); restoreChannel('${channel.id}', '${group.name}')">恢复</button>
@@ -4389,9 +4472,11 @@ if(success){
                                                onchange="toggleChannelSelection('${channel.id}')"
                                                ${selectedChannels.has(channel.id) ? 'checked' : ''}>
                                     ` : (isNameSorted ? `<span class="channel-drag-handle" aria-hidden="true"></span>` : `<span class="channel-drag-handle" aria-hidden="true" title="拖拽排序">⠿</span>`)}
+                                    ${channelLogoThumb(channel)}
                                     <div class="my-playlist-channel-name" title="点击查看详情：${channel.name}" onclick="showChannelDetail('${channel.id}', false)" style="cursor: pointer;">
                                         <span class="channel-detail-hint" aria-hidden="true">ⓘ</span>${channel.name}
                                     </div>
+                                    ${channelEpgBadge(channel)}
                                     ${!isBatchMode ? `
                                         <div class="my-playlist-channel-actions">
                                             <button onclick="event.stopPropagation(); hideChannel('${channel.id}')">隐藏</button>
@@ -5436,6 +5521,16 @@ if(success){
                     <div style="margin-bottom: 15px;">
                         <strong style="color: #667eea;">频道ID：</strong>
                         <span style="font-family: monospace; background: #f5f5f5; padding: 2px 6px; border-radius: 3px;">${channel.id || '未知'}</span>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <strong style="color: #667eea;">配对状态：</strong>
+                        ${channel.epgMatched
+                            ? `<span style="display:inline-flex;align-items:center;gap:4px;background:#f6ffed;color:#52a30d;border:1px solid #d6f0bd;border-radius:4px;padding:2px 9px;font-size:12px;margin-right:6px;">📅 节目单已匹配${channel.epgName ? ' · ' + channel.epgName : ''}</span>`
+                            : `<span style="display:inline-flex;align-items:center;gap:4px;background:#fafafa;color:#999;border:1px solid #eee;border-radius:4px;padding:2px 9px;font-size:12px;margin-right:6px;">📅 未匹配节目单</span>`}
+                        <span style="display:inline-flex;align-items:center;gap:4px;background:#e6f2ff;color:#1166c7;border:1px solid #cfe5ff;border-radius:4px;padding:2px 9px;font-size:12px;">🖼️ 台标 · ${({ local: '本地上传', source: '源自带', auto: '公共库', none: '无' })[channel.logoStatus] || '—'}</span>
+                        ${(channel.epgName && channel.epgName !== channel.name)
+                            ? `<div style="color:#999;font-size:12px;margin-top:6px;line-height:1.6;">显示名「${channel.name}」已自动归一到「${channel.epgName}」匹配节目单，显示名本身不变。</div>`
+                            : ''}
                     </div>
             `;
 

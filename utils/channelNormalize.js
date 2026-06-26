@@ -127,3 +127,26 @@ export function getCanonicalMap() {
 export function normalizeTvgName(name) {
   return getCanonicalMap().get(normalizeKey(name)) || null
 }
+
+let _pbIds = { sig: null, set: null }
+
+// 读取 playback.xml 里实际存在的 <channel id> 集合（按 mtime 缓存）。
+// 用于「这个频道到底有没有节目单」的判定：播放器按 tvg-id 对 playback 的 channel id，
+// id 在集合里 = 有节目单。issue #38（后台展示每频道配对状态）
+export function getPlaybackChannelIds() {
+  const pbPath = dataPath("playback.xml")
+  const sig = String(safeMtime(pbPath))
+  if (_pbIds.sig === sig && _pbIds.set) return _pbIds.set
+
+  const set = new Set()
+  if (existsSync(pbPath)) {
+    try {
+      const xml = readFileSync(pbPath, "utf-8")
+      const re = /<channel\s+id="([^"]+)"/g
+      let m
+      while ((m = re.exec(xml)) !== null) set.add(decodeXml(m[1]))
+    } catch { /* 读取失败则视为空集，频道一律显示「未匹配」而非报错 */ }
+  }
+  _pbIds = { sig, set }
+  return set
+}

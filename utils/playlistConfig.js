@@ -3,8 +3,17 @@ import { readFileSync, existsSync, unlinkSync } from "node:fs"
 import { writeJsonFileSync } from "./fileUtil.js"
 import { dataPath } from "./paths.js"
 import { printBlue, printGreen, printYellow, printRed } from "./colorOut.js"
-import { enableTvgNormalize, enableDisplayNameUnify } from "../config.js"
-import { getCanonicalMap, normalizeKey } from "./channelNormalize.js"
+import { enableTvgNormalize, enableDisplayNameUnify, externalLogoBase } from "../config.js"
+import { getCanonicalMap, normalizeKey, normalizeTvgName, getPlaybackChannelIds } from "./channelNormalize.js"
+
+// 台标来源分类（供后台展示）：本地上传 / 源自带 / 公共库兜底 / 无。
+// 依据 interface 里写出的 tvg-logo 形态判定，不联网、零额外成本。issue #38 / #40
+function classifyLogo(logo) {
+  if (!logo) return 'none'
+  if (logo.includes('/logos/')) return 'local'                                  // ${replace}/logos/<名>.<ext>（本地上传/手放，最高优先级）
+  if (externalLogoBase && logo.startsWith(externalLogoBase)) return 'auto'       // fanmingming 等公共库按名兜底
+  return 'source'                                                               // 咪咕 pics / m3u 源自带
+}
 
 // 多套配置档（大分组）：每台电视一套个性化定制。
 // - default 档沿用原 my-playlist-config.json（零迁移、向后兼容老部署）
@@ -114,7 +123,8 @@ export function parseInterfaceTxt() {
     const content = readFileSync(interfacePath, 'utf-8')
     const lines = content.split('\n')
     const groups = {}
-    
+    const playbackIds = getPlaybackChannelIds()   // 解析一次：用于逐频道判定有无节目单（issue #38）
+
     let currentGroup = null
     
     for (let i = 0; i < lines.length; i++) {
@@ -149,17 +159,27 @@ export function parseInterfaceTxt() {
           if (!groups[groupName]) {
             groups[groupName] = []
           }
-          
+
+          const logo = tvgLogoMatch ? tvgLogoMatch[1] : ''
+          // 配对状态（issue #38）：让后台「我的频道」每个频道直接看到节目单 / 台标是否命中，不用逐个点开。
+          // 节目单：按订阅实际写出的 tvg-id（开启归一时取规范名）对 playback.xml 的 channel id 判定。
+          const canonical = enableTvgNormalize ? normalizeTvgName(tvgName) : null
+          const epgId = canonical || tvgName
+          const epgMatched = playbackIds.has(epgId) || playbackIds.has(channelName)
+
           groups[groupName].push({
             id: channelId,
             name: channelName,
             tvgId: tvgIdMatch ? tvgIdMatch[1] : '',
             tvgName: tvgName,
-            logo: tvgLogoMatch ? tvgLogoMatch[1] : '',
+            logo,
+            logoStatus: classifyLogo(logo),       // local | source | auto | none
+            epgMatched,                            // 该频道是否有节目单
+            epgName: epgMatched ? epgId : '',      // 命中的规范名（详情里展示，解释「显示名虽特殊但已归一匹配」）
             url: url,
             originalGroup: groupName
           })
-          
+
           i++ // 跳过URL行
         }
       }
