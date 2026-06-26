@@ -3,7 +3,7 @@ import { readFileSync, existsSync, unlinkSync } from "node:fs"
 import { writeJsonFileSync } from "./fileUtil.js"
 import { dataPath } from "./paths.js"
 import { printBlue, printGreen, printYellow, printRed } from "./colorOut.js"
-import { enableTvgNormalize } from "../config.js"
+import { enableTvgNormalize, enableDisplayNameUnify } from "../config.js"
 import { getCanonicalMap, normalizeKey } from "./channelNormalize.js"
 
 // 多套配置档（大分组）：每台电视一套个性化定制。
@@ -288,8 +288,8 @@ export function applyConfig(groups, config) {
     const resultGroups = {}
     const channelGroupMap = config.channelGroupMap || {}
 
-    // EPG 名称规整映射（issue #39，开关默认开）：构建一次循环内复用；getCanonicalMap 内部按文件 mtime 缓存
-    const canonicalMap = enableTvgNormalize ? getCanonicalMap() : null
+    // EPG 名称规整（#39）/ 统一显示名（#56）共用「归一 key → 规范名」映射；构建一次循环内复用，getCanonicalMap 内部按文件 mtime 缓存
+    const canonicalMap = (enableTvgNormalize || enableDisplayNameUnify) ? getCanonicalMap() : null
 
     // 遍历所有频道
     channelMap.forEach((channel, key) => {
@@ -331,12 +331,19 @@ export function applyConfig(groups, config) {
       }
 
       // EPG 名称规整（issue #39）：把 tvg-id / tvg-name 归一到规范名（= EPG/playback.xml 里的频道名），
-      // 让异构外部源频道也能匹配上节目单。只改 tvg、不动显示名，与「单频道重命名」互补。
+      // 让异构外部源频道也能匹配上节目单。
+      // 统一显示名（issue #56）：开关开启且未手动重命名时，把显示名也归一到规范名，
+      // 让不同源「CCTV1 / CCTV-1 / CCTV1综合」按规则批量统一成同一个名字。
       if (canonicalMap) {
         const canonical = canonicalMap.get(normalizeKey(channel.tvgName || channel.name))
         if (canonical) {
-          channel.tvgId = canonical
-          channel.tvgName = canonical
+          if (enableTvgNormalize) {
+            channel.tvgId = canonical
+            channel.tvgName = canonical
+          }
+          if (enableDisplayNameUnify && !renamedName) {
+            channel.name = canonical
+          }
         }
       }
 

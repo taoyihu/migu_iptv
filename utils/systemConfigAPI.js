@@ -6,7 +6,7 @@ import {
   reloadConfig, sanitizeSegment,
   userId, token, port, host, rateType, pass,
   enableHDR, enableH265, programInfoUpdateInterval, refreshToken, adminPath,
-  enableMigu, enableBuiltInSources, enableBuiltInSubscriptions
+  enableMigu, enableBuiltInSources, enableBuiltInSubscriptions, enableDisplayNameUnify
 } from "../config.js"
 
 const SYSTEM_CONFIG_PATH = dataPath('system-config.json')
@@ -29,7 +29,8 @@ const ENV_KEY_MAP = {
   adminPath: 'madminPath',
   enableMigu: 'menableMigu',
   enableBuiltInSources: 'menableBuiltInSources',
-  enableBuiltInSubscriptions: 'menableBuiltInSubscriptions'
+  enableBuiltInSubscriptions: 'menableBuiltInSubscriptions',
+  enableDisplayNameUnify: 'menableDisplayNameUnify'
 }
 
 // 解析环境变量布尔（与 config.js parseBool 同义）：用于判断 mblank 空白模式是否由 env 开启
@@ -69,7 +70,8 @@ export function getSystemConfigAPI() {
         adminPath,
         enableMigu,
         enableBuiltInSources,
-        enableBuiltInSubscriptions
+        enableBuiltInSubscriptions,
+        enableDisplayNameUnify
       },
       envOverrides,
       // 空白模式总开关是否由环境变量 mblank 开启（前端据此提示：内容开关默认关闭，可在此单独打开覆盖）
@@ -126,6 +128,9 @@ export function saveSystemConfigAPI(config) {
     }
     if (config.enableBuiltInSubscriptions !== undefined) {
       validated.enableBuiltInSubscriptions = config.enableBuiltInSubscriptions !== false
+    }
+    if (config.enableDisplayNameUnify !== undefined) {
+      validated.enableDisplayNameUnify = config.enableDisplayNameUnify === true
     }
 
     // 原子写入，避免并发保存 / 写入中断损坏文件

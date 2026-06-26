@@ -31,6 +31,13 @@ export function normalizeKey(name) {
   if (!name) return ""
   let s = toHalfWidth(String(name)).trim().toUpperCase()
 
+  // 「央视N / 央视N套 / 央视N台」视作 CCTVN（含中文数字一~十七），与 CCTV 各种写法归一到一起
+  s = s.replace(/央视\s*([0-9]{1,2}|[一二三四五六七八九十]{1,3})\s*(?:套|台|频道|综合|高清)?/, (whole, num) => {
+    const cn = { '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10, '十一': 11, '十二': 12, '十三': 13, '十四': 14, '十五': 15, '十六': 16, '十七': 17 }
+    const n = /^[0-9]+$/.test(num) ? num : cn[num]
+    return n ? 'CCTV' + n : whole
+  })
+
   // CCTV 专项：靠频道号识别，丢弃「综合/财经/高清」等描述词，避免同台不同写法对不上
   const m = s.match(/CCTV[-\s]*(\d{1,2})\s*(\+|PLUS|加)?/)
   if (m) {

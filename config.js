@@ -40,7 +40,7 @@ function sanitizeSegment(value, fallback) {
 // ESM 命名导出是实时绑定，重新赋值后所有 import 方都会读到新值。
 // 注意：port、programInfoUpdateInterval 在 server.listen / setInterval 时已被读取，
 // 热更新不会改变已启动的监听端口与定时器周期，这两项仍需重启生效。
-let userId, token, port, host, rateType, debug, pass, enableHDR, enableH265, programInfoUpdateInterval, refreshToken, adminPath, externalLogoBase, enableTvgNormalize, enableEpgAggregation, enableUserTokens
+let userId, token, port, host, rateType, debug, pass, enableHDR, enableH265, programInfoUpdateInterval, refreshToken, adminPath, externalLogoBase, enableTvgNormalize, enableEpgAggregation, enableUserTokens, enableDisplayNameUnify
 // 内容开关：咪咕核心 / 内置单频道源 / 内置订阅源。默认全开（老用户零感知）
 let enableMigu, enableBuiltInSources, enableBuiltInSubscriptions
 
@@ -83,6 +83,9 @@ function applyConfig(systemConfig) {
   enableEpgAggregation = systemConfig.enableEpgAggregation !== undefined ? systemConfig.enableEpgAggregation : parseBool(process.env.menableEpgAggregation, true)
   // 用户访问令牌（一人一源）：开启后台「用户管理」生成的 /u/<token>/ 链接才生效。默认开，但无任何用户时完全不激活（对老部署零影响）。
   enableUserTokens = systemConfig.enableUserTokens !== undefined ? systemConfig.enableUserTokens : parseBool(process.env.menableUserTokens, true)
+  // 统一频道显示名（issue #56）：按归一规则把异构源的频道显示名也统一到规范名（如 CCTV1/CCTV-1 → CCTV1综合）。
+  // 默认关（opt-in，避免改动老用户的显示名）；手动重命名优先级更高。
+  enableDisplayNameUnify = systemConfig.enableDisplayNameUnify !== undefined ? systemConfig.enableDisplayNameUnify : parseBool(process.env.menableDisplayNameUnify, false)
 
   // 空白模式总开关：开启后下面三项内容开关「默认」翻转为关（一行得到空白 docker）。
   // 优先级：细粒度开关显式值 > 总开关推出的默认 > 全开。所以可 mblank=true + menableMigu=true 单独留咪咕。
@@ -101,7 +104,7 @@ applyConfig(loadSystemConfig())
 // 重新加载系统配置（保存系统配置后调用，避免必须重启进程）
 function reloadConfig() {
   applyConfig(loadSystemConfig())
-  return { userId, token, port, host, rateType, pass, enableHDR, enableH265, programInfoUpdateInterval, refreshToken, adminPath, externalLogoBase, enableTvgNormalize, enableEpgAggregation, enableUserTokens, enableMigu, enableBuiltInSources, enableBuiltInSubscriptions }
+  return { userId, token, port, host, rateType, pass, enableHDR, enableH265, programInfoUpdateInterval, refreshToken, adminPath, externalLogoBase, enableTvgNormalize, enableEpgAggregation, enableUserTokens, enableDisplayNameUnify, enableMigu, enableBuiltInSources, enableBuiltInSubscriptions }
 }
 
-export { userId, token, port, host, rateType, debug, pass, enableHDR, programInfoUpdateInterval, enableH265, refreshToken, adminPath, externalLogoBase, enableTvgNormalize, enableEpgAggregation, enableUserTokens, enableMigu, enableBuiltInSources, enableBuiltInSubscriptions, reloadConfig, sanitizeSegment }
+export { userId, token, port, host, rateType, debug, pass, enableHDR, programInfoUpdateInterval, enableH265, refreshToken, adminPath, externalLogoBase, enableTvgNormalize, enableEpgAggregation, enableUserTokens, enableDisplayNameUnify, enableMigu, enableBuiltInSources, enableBuiltInSubscriptions, reloadConfig, sanitizeSegment }
