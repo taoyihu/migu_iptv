@@ -136,6 +136,29 @@ export function normalizeTvgName(name) {
   return getCanonicalMap().get(normalizeKey(name)) || null
 }
 
+let _pbIds = { sig: null, set: null }
+
+// 读取 playback.xml 里实际存在的 <channel id> 集合（按 mtime 缓存）。
+// 用于「这个频道到底有没有节目单」的判定：播放器按 tvg-id 对 playback 的 channel id，
+// id 在集合里 = 有节目单。issue #38（后台展示每频道配对状态）
+export function getPlaybackChannelIds() {
+  const pbPath = dataPath("playback.xml")
+  const sig = String(safeMtime(pbPath))
+  if (_pbIds.sig === sig && _pbIds.set) return _pbIds.set
+
+  const set = new Set()
+  if (existsSync(pbPath)) {
+    try {
+      const xml = readFileSync(pbPath, "utf-8")
+      const re = /<channel\s+id="([^"]+)"/g
+      let m
+      while ((m = re.exec(xml)) !== null) set.add(decodeXml(m[1]))
+    } catch { /* 读取失败则视为空集，频道一律显示「未匹配」而非报错 */ }
+  }
+  _pbIds = { sig, set }
+  return set
+}
+
 // 为「按名取台标」清洗频道名（issue #40）。目标是 fanmingming 这类公共台标库的短文件名约定
 // （CCTV1.png / CCTV5+.png / CCTV4欧洲.png / 湖南卫视.png），实测库里没有 CCTV1综合.png、湖南卫视高清.png。
 // 与 normalizeKey 的差异（所以不复用）：
