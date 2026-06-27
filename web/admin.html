@@ -1633,6 +1633,7 @@
            节目单配对状态不放进列表（无文字说明不易懂），改在「频道详情」里以文字展示（issue #62）。 */
         .ch-logo-wrap { flex: 0 0 auto; margin-right: 8px; display: inline-flex; }
         .ch-logo { width: 26px; height: 26px; object-fit: contain; }
+        .ch-logo-ph { width: 26px; height: 26px; display: inline-block; }   /* 无台标：同尺寸透明空白占位，保持频道名对齐（issue #62） */
 
         /* 顶部内联订阅地址栏（issue #38：免点编辑即可复制） */
         .subscribe-bar {
@@ -4160,11 +4161,13 @@ if(success){
         function channelLogoThumb(channel) {
             const base = window.location.origin + API_PREFIX;
             const src = channel.logo ? String(channel.logo).replace(/\$\{replace\}/g, base) : '';
-            if (!src) return '';
+            // 无台标 / 加载失败：保留同尺寸透明空白占位（无背景），让有/无台标的频道名对齐（issue #62）
+            if (!src) return `<span class="ch-logo-wrap" aria-hidden="true"><span class="ch-logo-ph"></span></span>`;
             const tip = { local: '台标：本地上传', source: '台标：源自带', auto: '台标：公共库匹配' }[channel.logoStatus] || '台标';
             return `<span class="ch-logo-wrap" aria-hidden="true">`
                 + `<img class="ch-logo" src="${escapeHtml(src)}" loading="lazy" alt="" title="${escapeHtml(tip)}" `
-                + `onerror="this.parentElement.remove()"></span>`;
+                + `onerror="this.style.display='none';this.nextElementSibling.style.display='inline-block'">`
+                + `<span class="ch-logo-ph" style="display:none"></span></span>`;
         }
 
         function renderMyPlaylist() {
