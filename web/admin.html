@@ -18,7 +18,7 @@
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1760px;
             margin: 0 auto;
         }
 
@@ -1496,7 +1496,7 @@
 
         .my-playlist-channels {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
             gap: 10px;
         }
 
@@ -1591,6 +1591,7 @@
         .my-playlist-channel-actions {
             display: flex;
             gap: 4px;
+            margin-left: 12px;   /* 与频道名之间留间距，避免「隐藏」按钮贴太近（issue #62） */
             opacity: 0;
             transition: opacity 0.3s;
         }
@@ -1628,23 +1629,14 @@
             background: #f5f5f5;
         }
 
-        /* 频道台标缩略图 + 节目单配对徽章（issue #38：每频道直观看到配对状态） */
+        /* 频道台标缩略图（issue #38）。不加背景框，非方形图也自然显示（issue #62）。
+           节目单配对状态不放进列表（无文字说明不易懂），改在「频道详情」里以文字展示（issue #62）。 */
         .ch-logo-wrap { flex: 0 0 auto; margin-right: 8px; display: inline-flex; }
-        .ch-logo {
-            width: 24px; height: 24px; object-fit: contain;
-            border: 1px solid #eee; border-radius: 4px; background: #fff;
-        }
+        .ch-logo { width: 26px; height: 26px; object-fit: contain; }
         .ch-logo-ph {
-            width: 24px; height: 24px; border: 1px dashed #d9d9d9; border-radius: 4px;
-            background: #fafafa; display: inline-flex; align-items: center; justify-content: center;
+            width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center;
         }
-        .ch-logo-ph::after { content: ''; width: 11px; height: 1px; background: #ccc; transform: rotate(-45deg); }
-        .ch-epg {
-            flex: 0 0 auto; margin-left: 6px; font-size: 11px; line-height: 1;
-            padding: 3px 5px; border-radius: 4px; border: 1px solid transparent; cursor: default;
-        }
-        .ch-epg.on  { background: #f6ffed; border-color: #d6f0bd; }
-        .ch-epg.off { background: #fafafa; border-color: #eee; filter: grayscale(1); opacity: .5; }
+        .ch-logo-ph::after { content: ''; width: 12px; height: 1px; background: #dcdcdc; transform: rotate(-45deg); }
 
         /* 顶部内联订阅地址栏（issue #38：免点编辑即可复制） */
         .subscribe-bar {
@@ -4180,15 +4172,6 @@ if(success){
                 + `<span class="ch-logo-ph" style="display:none" title="无台标（图片加载失败）"></span></span>`;
         }
 
-        // 节目单配对徽章（issue #38）：绿=已匹配（标题含归一后的规范名），灰=未匹配。
-        function channelEpgBadge(channel) {
-            if (channel.epgMatched) {
-                const t = channel.epgName ? ('已匹配节目单：' + channel.epgName) : '已匹配节目单';
-                return `<span class="ch-epg on" title="${escapeHtml(t)}">📅</span>`;
-            }
-            return `<span class="ch-epg off" title="未匹配节目单">📅</span>`;
-        }
-
         function renderMyPlaylist() {
             renderSubscribeBar();   // 默认档用户不触发 renderProfileUI，这里兜底渲染订阅地址栏（issue #38）
             renderGroupLists();
@@ -4404,7 +4387,6 @@ if(success){
                                 <div class="my-playlist-channel-name" title="点击查看详情：${channel.name}" onclick="showChannelDetail('${channel.id}', true)" style="cursor: pointer;">
                                     <span class="channel-detail-hint" aria-hidden="true">ⓘ</span>${channel.name}
                                 </div>
-                                ${channelEpgBadge(channel)}
                                 ${group.isPartialDelete && !isBatchMode ? `
                                     <div class="my-playlist-channel-actions" style="opacity: 1 !important;">
                                         <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); restoreChannel('${channel.id}', '${group.name}')">恢复</button>
@@ -4476,7 +4458,6 @@ if(success){
                                     <div class="my-playlist-channel-name" title="点击查看详情：${channel.name}" onclick="showChannelDetail('${channel.id}', false)" style="cursor: pointer;">
                                         <span class="channel-detail-hint" aria-hidden="true">ⓘ</span>${channel.name}
                                     </div>
-                                    ${channelEpgBadge(channel)}
                                     ${!isBatchMode ? `
                                         <div class="my-playlist-channel-actions">
                                             <button onclick="event.stopPropagation(); hideChannel('${channel.id}')">隐藏</button>
