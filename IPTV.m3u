@@ -38,6 +38,8 @@ https://o11.163189.xyz/stream/live/aec/
 http://cdn6.163189.xyz/163189/wxxw
 #EXTINF:-1 group-title="亚太",TVBS亚洲
 http://38.64.72.148/hls/modn/list/4005/playlist.m3u8
+#EXTINF:-1 group-title="亚太",TVBS亚洲
+http://38.64.72.148/hls/modn/list/4005/chunklist1.m3u8
 #EXTINF:-1 group-title="亚太",NOW新闻
 http://cdn.163189.xyz/163189/now
 #EXTINF:-1 group-title="亚太",CH5
@@ -78,7 +80,7 @@ http://cdn.163189.xyz/163189/hoy78
 http://cdn.163189.xyz/163189/rthk32
 #EXTINF:-1 group-title="亚太",ViuTV
 https://cdn.163189.xyz/163189/viu
-#EXTINF:-1 tvg-id="456560" tvg-name="非凡新聞HD" group-title="亚太",非凡新聞
+#EXTINF:-1 tvg-id="456560" tvg-name="非凡新聞HD" tvg-logo="https://epg.pw/media/images/channel/2016/06/17/large/20160617165249161501_56.png" group-title="亚太",非凡新聞
 rtmp://f13h.mine.nu/sat/tv581
 #EXTINF:-1 group-title="亚太",耀才财经
 https://v3.mediacast.hk/webcast/bshdlive-pc/playlist.m3u8
