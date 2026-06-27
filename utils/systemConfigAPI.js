@@ -2,6 +2,7 @@ import { readFileSync, existsSync } from "node:fs"
 import { writeJsonFileSync } from "./fileUtil.js"
 import { dataPath } from "./paths.js"
 import update from "./updateData.js"
+import { clearUrlCache } from "./appUtils.js"
 import {
   reloadConfig, sanitizeSegment,
   userId, token, port, host, rateType, pass,
@@ -137,6 +138,9 @@ export function saveSystemConfigAPI(config) {
     writeJsonFileSync(SYSTEM_CONFIG_PATH, validated)
     // 热更新配置：除端口和更新间隔外即时生效，无需重启
     reloadConfig()
+    // 清空咪咕地址缓存：H265/HDR/清晰度等改动后，旧缓存（按 pid，3h）仍会发旧编码的流，
+    // 导致开关「看起来没生效」。保存后清掉，下次播放即按新配置重新解析（issue #60）。
+    clearUrlCache()
     // 内容开关（咪咕/内置源/内置订阅）影响频道列表，触发一次后台重新生成播放列表使其即时生效。
     // fire-and-forget：不阻塞保存响应；update() 内部 updateQueue 串行化，并发安全。
     update(0, { regenerateOnly: true }).catch(err => console.error('重新生成播放列表失败:', err))

@@ -5,8 +5,14 @@ import { host, pass, rateType, token, userId, enableTvgNormalize } from "../conf
 import { printDebug, printGreen, printGrey, printRed, printYellow } from "./colorOut.js";
 import { readConfig, parseInterfaceTxt, applyConfig, generateM3u8, generateTxt } from "./playlistConfig.js";
 
-// url缓存 降低请求频率
+// url缓存 降低请求频率（按 pid 缓存咪咕解析出的播放地址，默认 3 小时）
 const urlCache = {}
+
+// 清空咪咕地址缓存：H265/HDR/清晰度等配置变更后调用，让新设置「即时生效」，
+// 不必等旧缓存过期（3h）或重启容器——旧缓存键只含 pid、不含 H265/HDR，否则会继续发旧编码的流（issue #60）。
+function clearUrlCache() {
+  for (const k in urlCache) delete urlCache[k]
+}
 
 function interfaceStr(url, headers, urlUserId, urlToken, profile, accessPrefix) {
 
@@ -265,4 +271,4 @@ function channelCache(pid, params) {
   return cache
 }
 
-export { interfaceStr, channel, channelCache }
+export { interfaceStr, channel, channelCache, clearUrlCache }
